@@ -1,0 +1,1566 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>MediBhavan | Clinical Sanctuary</title>
+<!-- Fonts -->
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@200;300;400;500;600;700;800&display=swap" rel="stylesheet"/>
+<!-- Material Symbols -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<!-- Tailwind -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script>
+  tailwind.config = {
+    darkMode:"class",
+    theme: {
+      extend: {
+        colors: {
+          "primary":"#632ce5","primary-container":"#7c4dff","on-primary":"#ffffff",
+          "on-primary-container":"#fcf6ff","primary-fixed":"#e8deff","primary-fixed-dim":"#cdbdff",
+          "inverse-primary":"#cdbdff","surface-tint":"#6833ea","on-primary-fixed":"#20005f",
+          "secondary":"#4c56af","secondary-container":"#959efd","on-secondary":"#ffffff",
+          "on-secondary-container":"#27308a","secondary-fixed":"#e0e0ff","secondary-fixed-dim":"#bdc2ff",
+          "on-secondary-fixed":"#000767","on-secondary-fixed-variant":"#343d96",
+          "tertiary":"#006827","tertiary-container":"#008434","on-tertiary":"#ffffff",
+          "on-tertiary-container":"#e6ffe2","tertiary-fixed":"#69ff87","tertiary-fixed-dim":"#3ce36a",
+          "on-tertiary-fixed":"#002108","on-tertiary-fixed-variant":"#00531e",
+          "error":"#ba1a1a","error-container":"#ffdad6","on-error":"#ffffff","on-error-container":"#93000a",
+          "background":"#f7f9fc","on-background":"#191c1e",
+          "surface":"#f7f9fc","on-surface":"#191c1e","surface-variant":"#e0e3e6",
+          "on-surface-variant":"#494455","surface-container-lowest":"#ffffff",
+          "surface-container-low":"#f2f4f7","surface-container":"#eceef1",
+          "surface-container-high":"#e6e8eb","surface-container-highest":"#e0e3e6",
+          "surface-bright":"#f7f9fc","surface-dim":"#d8dadd",
+          "inverse-surface":"#2d3133","inverse-on-surface":"#eff1f4",
+          "outline":"#7a7487","outline-variant":"#cac3d8",
+        },
+        fontFamily:{ "headline":["Manrope"],"body":["Manrope"],"label":["Manrope"] },
+        borderRadius:{ "DEFAULT":"0.25rem","lg":"0.5rem","xl":"0.75rem","2xl":"1rem","3xl":"1.5rem","full":"9999px" },
+      }
+    }
+  }
+</script>
+<style>
+  body { font-family:'Manrope',sans-serif; }
+  .material-symbols-outlined { font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24; vertical-align:middle; line-height:1; }
+  .ms-fill { font-variation-settings:'FILL' 1,'wght' 400,'GRAD' 0,'opsz' 24; }
+  .glass-panel { background:rgba(255,255,255,0.8); backdrop-filter:blur(20px); -webkit-backdrop-filter:blur(20px); }
+  .no-scrollbar::-webkit-scrollbar { display:none; }
+  .no-scrollbar { -ms-overflow-style:none; scrollbar-width:none; }
+  .auth-bg { background:linear-gradient(135deg,#f3f0ff 0%,#ede9fe 30%,#f7f9fc 100%); }
+  .sidebar-active { background:rgba(99,44,229,0.08); color:#632ce5; font-weight:700; border-radius:0.75rem; }
+  .bento-hover { transition:all 0.25s ease; }
+  .bento-hover:hover { transform:translateY(-2px); box-shadow:0 12px 40px rgba(99,44,229,0.08); }
+  @keyframes fadeUp { from{opacity:0;transform:translateY(12px)} to{opacity:1;transform:translateY(0)} }
+  @keyframes slideIn { from{opacity:0;transform:translateX(-8px)} to{opacity:1;transform:translateX(0)} }
+  .anim-up { animation:fadeUp 0.3s ease; }
+  .anim-in { animation:slideIn 0.25s ease; }
+  @keyframes spin { to{transform:rotate(360deg)} }
+  .spin { animation:spin 0.7s linear infinite; display:inline-block; }
+  @keyframes pop { 0%{opacity:0;transform:scale(0.96) translateY(8px)} 100%{opacity:1;transform:scale(1) translateY(0)} }
+  .pop { animation:pop 0.2s ease; }
+  .chat-bubble-out { background:linear-gradient(135deg,#632ce5,#7c4dff); border-radius:1rem 1rem 0.25rem 1rem; }
+  .chat-bubble-in { background:#f2f4f7; border-radius:1rem 1rem 1rem 0.25rem; }
+  input[type="date"]::-webkit-calendar-picker-indicator { opacity:0.5; }
+</style>
+</head>
+<body class="bg-surface text-on-surface selection:bg-primary/10">
+<div id="root"></div>
+
+<!-- Scripts -->
+<script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+
+<script type="text/babel">
+const { useState, useEffect, useRef, useCallback, createContext, useContext } = React;
+
+/* ════════════════════════════════════════════════════
+   CONFIG — Spring Boot on 8080, same endpoints
+════════════════════════════════════════════════════ */
+const API_BASE = 'http://localhost:8080/api';
+
+/* ════════════════════════════════════════════════════
+   HTTP / API LAYER  (unchanged from working version)
+════════════════════════════════════════════════════ */
+const http = axios.create({
+  baseURL: API_BASE,
+});
+
+http.interceptors.request.use(cfg => {
+  const a = JSON.parse(localStorage.getItem('mb_auth') || 'null');
+  if (a?.token) cfg.headers.Authorization = `Bearer ${a.token}`;
+  return cfg;
+});
+
+const api = {
+  auth: {
+    login:          d  => http.post('/auth/login', d).then(r => r.data),
+    register:       d  => http.post('/auth/register', d).then(r => r.data),
+    me:             () => http.get('/auth/me').then(r => ({ user: r.data })),
+    updateProfile:  d  => http.put('/auth/profile', d).then(r => ({ user: r.data })),
+    changePassword: d  => http.put('/auth/change-password', d).then(r => r.data),
+  },
+  connections: {
+    find:   uid => http.get(`/connections/find/${uid}`).then(r => r.data),
+    create: d   => http.post('/connections', d).then(r => ({ connection: r.data, targetUser: r.data.doctor || r.data.patient })),
+    list:   ()  => http.get('/connections').then(r => r.data),
+    remove: id  => http.delete(`/connections/${id}`).then(r => r.data),
+  },
+  files: {
+    upload:         fd        => http.post('/files/upload', fd, { headers: { 'Content-Type': 'multipart/form-data' }}).then(r => r.data),
+    listMy:         type      => http.get(`/files/my${type ? `?type=${type}` : ''}`).then(r => r.data),
+    listForPatient: (pid, tp) => http.get(`/files/patient/${pid}${tp ? `?type=${tp}` : ''}`).then(r => r.data),
+    delete:         id        => http.delete(`/files/${id}`).then(r => r.data),
+  },
+  messages: {
+    list:   cid => http.get(`/messages/${cid}`).then(r => r.data),
+    send:   d   => http.post('/messages', d).then(r => r.data),
+    unread: ()  => http.get('/messages/unread').then(r => r.data),
+  },
+  appointments: {
+    list:   status => http.get(`/appointments${status ? `?status=${status}` : ''}`).then(r => r.data),
+    create: d      => http.post('/appointments', d).then(r => r.data),
+    update: (id,d) => http.put(`/appointments/${id}`, d).then(r => r.data),
+    cancel: id     => http.delete(`/appointments/${id}`).then(r => r.data),
+  },
+};
+
+/* ════════════════════════════════════════════════════
+   HELPERS
+════════════════════════════════════════════════════ */
+const getId      = o   => o?.id || o?._id;
+const connPatient= c   => c?.patient  || c?.patientId;
+const connDoctor = c   => c?.doctor   || c?.doctorId;
+const initials   = n   => n ? n.split(' ').map(x=>x[0]).join('').toUpperCase().slice(0,2) : '?';
+const errMsg     = e   => e?.response?.data?.message || e?.response?.data?.error || e?.message || 'Something went wrong.';
+const fmtDate    = d   => { if (!d) return ''; return new Date(d).toLocaleDateString('en-IN', { day:'numeric', month:'short', year:'numeric' }); };
+const fmtTime    = t   => { if (!t) return ''; const [h,m]=t.split(':'); const hr=parseInt(h); return `${hr>12?hr-12:hr||12}:${m} ${hr>=12?'PM':'AM'}`; };
+const fmtSize    = b   => { if (!b) return ''; if (b<1024) return `${b} B`; if (b<1048576) return `${(b/1024).toFixed(1)} KB`; return `${(b/1048576).toFixed(1)} MB`; };
+
+// Avatar colors — violet/green/amber/blue/rose palette to match light theme
+const AV_PALETTES = [
+  'bg-violet-100 text-violet-700','bg-emerald-100 text-emerald-700',
+  'bg-amber-100 text-amber-700','bg-sky-100 text-sky-700',
+  'bg-rose-100 text-rose-700','bg-indigo-100 text-indigo-700',
+];
+const avPalette = s => AV_PALETTES[(s||'A').charCodeAt(0) % AV_PALETTES.length];
+
+const FILE_INFO = {
+  prescription: { icon:'medication', color:'text-emerald-600', bg:'bg-emerald-50' },
+  report:       { icon:'description', color:'text-violet-600', bg:'bg-violet-50' },
+  test:         { icon:'science',     color:'text-amber-600',  bg:'bg-amber-50'  },
+  xray:         { icon:'radiology',   color:'text-sky-600',    bg:'bg-sky-50'    },
+  scan:         { icon:'filter_center_focus', color:'text-rose-600', bg:'bg-rose-50' },
+  other:        { icon:'folder',      color:'text-slate-500',  bg:'bg-slate-100' },
+};
+const fInfo = t => FILE_INFO[t] || FILE_INFO.other;
+
+const APPT_BADGE = {
+  pending:   'bg-amber-50 text-amber-700 border border-amber-200',
+  confirmed: 'bg-emerald-50 text-emerald-700 border border-emerald-200',
+  cancelled: 'bg-red-50 text-red-600 border border-red-200',
+  completed: 'bg-slate-100 text-slate-500 border border-slate-200',
+};
+
+/* ════════════════════════════════════════════════════
+   TOAST CONTEXT
+════════════════════════════════════════════════════ */
+const ToastCtx = createContext(null);
+function ToastProvider({ children }) {
+  const [toasts, setToasts] = useState([]);
+  const add = useCallback((msg, type='info') => {
+    const id = Date.now();
+    setToasts(p => [...p, { id, msg, type }]);
+    setTimeout(() => setToasts(p => p.filter(t => t.id !== id)), 4000);
+  }, []);
+  const rm = id => setToasts(p => p.filter(t => t.id !== id));
+  const icons = { success:'check_circle', error:'error', warning:'warning', info:'info' };
+  const colors = {
+    success:'bg-emerald-50 border-emerald-200 text-emerald-800',
+    error:  'bg-red-50 border-red-200 text-red-800',
+    warning:'bg-amber-50 border-amber-200 text-amber-800',
+    info:   'bg-violet-50 border-violet-200 text-violet-800',
+  };
+  return (
+    <ToastCtx.Provider value={add}>
+      {children}
+      <div className="fixed bottom-8 right-8 z-50 flex flex-col gap-3 pointer-events-none">
+        {toasts.map(t => (
+          <div key={t.id} className={`glass-panel pop pointer-events-auto flex items-center gap-3 p-4 rounded-2xl shadow-2xl border ${colors[t.type]||colors.info} min-w-[260px] max-w-[340px]`}>
+            <span className={`material-symbols-outlined ms-fill text-xl flex-shrink-0`}>{icons[t.type]||icons.info}</span>
+            <span className="text-sm font-semibold flex-1">{t.msg}</span>
+            <button className="opacity-50 hover:opacity-100 transition-opacity pointer-events-auto" onClick={()=>rm(t.id)}>
+              <span className="material-symbols-outlined text-base">close</span>
+            </button>
+          </div>
+        ))}
+      </div>
+    </ToastCtx.Provider>
+  );
+}
+const useToast = () => useContext(ToastCtx);
+
+/* ════════════════════════════════════════════════════
+   SHARED ATOMS
+════════════════════════════════════════════════════ */
+function Spin({ size='sm' }) {
+  const s = size==='lg' ? 'w-8 h-8 border-4' : 'w-4 h-4 border-2';
+  return <div className={`${s} border-current border-t-transparent rounded-full spin opacity-60 inline-block`}></div>;
+}
+
+function Empty({ icon, title, msg, action }) {
+  return (
+    <div className="text-center py-14 px-6">
+      <div className="w-16 h-16 bg-surface-container-low rounded-2xl flex items-center justify-center mx-auto mb-4">
+        <span className="material-symbols-outlined text-3xl text-slate-300">{icon}</span>
+      </div>
+      <h3 className="text-base font-extrabold text-on-surface mb-2">{title}</h3>
+      <p className="text-sm text-on-surface-variant max-w-xs mx-auto mb-5 leading-relaxed">{msg}</p>
+      {action}
+    </div>
+  );
+}
+
+function Modal({ title, open, onClose, children, footer }) {
+  if (!open) return null;
+  return (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4" style={{background:'rgba(25,28,30,0.5)',backdropFilter:'blur(4px)'}}>
+      <div className="pop w-full max-w-lg bg-surface-container-lowest rounded-3xl shadow-2xl overflow-hidden">
+        <div className="flex items-center justify-between p-6 border-b border-outline-variant">
+          <h3 className="text-lg font-extrabold">{title}</h3>
+          <button className="p-2 rounded-xl hover:bg-surface-container transition-colors" onClick={onClose}>
+            <span className="material-symbols-outlined">close</span>
+          </button>
+        </div>
+        <div className="p-6 max-h-[65vh] overflow-y-auto">{children}</div>
+        {footer && <div className="p-4 border-t border-outline-variant flex justify-end gap-3">{footer}</div>}
+      </div>
+    </div>
+  );
+}
+
+/* ════════════════════════════════════════════════════
+   FORM ATOMS (Tailwind versions)
+════════════════════════════════════════════════════ */
+const inputCls = "w-full px-4 py-3 bg-surface-container-low border-none rounded-2xl text-sm focus:ring-2 focus:ring-primary/20 focus:bg-white transition-all outline-none font-body";
+const labelCls = "block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2";
+const btnPrimary = "inline-flex items-center justify-center gap-2 py-3 px-6 bg-primary text-white font-bold rounded-2xl shadow-lg shadow-primary/20 hover:bg-primary-container transition-all active:scale-95 disabled:opacity-50 disabled:cursor-default";
+const btnGhost   = "inline-flex items-center justify-center gap-2 py-2.5 px-5 bg-surface-container text-on-surface font-semibold rounded-xl hover:bg-surface-container-high transition-all text-sm disabled:opacity-50";
+const btnDanger  = "inline-flex items-center justify-center gap-2 py-2.5 px-5 bg-error-container text-on-error-container font-semibold rounded-xl hover:bg-red-200 transition-all text-sm disabled:opacity-50";
+
+/* ════════════════════════════════════════════════════
+   FILE CARD
+════════════════════════════════════════════════════ */
+function FileCard({ file, onDelete }) {
+  const toast = useToast();
+  const [del, setDel] = useState(false);
+  const fi = fInfo(file.type);
+  const auth = JSON.parse(localStorage.getItem('mb_auth')||'null');
+  const canDel = auth?.user && getId(auth.user) === getId(file.uploadedBy);
+
+  const download = () => {
+    const url = `${API_BASE}/files/download/${getId(file)}`;
+    fetch(url, { headers: { Authorization:`Bearer ${auth?.token}` }})
+      .then(r=>r.blob()).then(blob => {
+        const u=URL.createObjectURL(blob); const a=document.createElement('a');
+        a.href=u; a.download=file.originalName; a.click(); URL.revokeObjectURL(u);
+      }).catch(()=>toast('Download failed','error'));
+  };
+
+  const remove = async () => {
+    if (!confirm('Delete this file permanently?')) return;
+    setDel(true);
+    try { await api.files.delete(getId(file)); toast('File deleted','success'); onDelete(getId(file)); }
+    catch(e) { toast(errMsg(e),'error'); } finally { setDel(false); }
+  };
+
+  return (
+    <div className="bento-hover p-4 bg-surface-container-lowest rounded-2xl border border-outline-variant/50 group">
+      <div className={`w-10 h-10 ${fi.bg} rounded-xl flex items-center justify-center mb-3`}>
+        <span className={`material-symbols-outlined ms-fill ${fi.color}`}>{fi.icon}</span>
+      </div>
+      <p className="text-xs font-bold truncate text-on-surface mb-1" title={file.originalName}>{file.originalName}</p>
+      <p className="text-[10px] text-slate-400">{fmtDate(file.createdAt)} · {fmtSize(file.size)}</p>
+      {file.uploadedBy && <p className="text-[10px] text-primary font-semibold mt-1">{file.uploadedBy.name}</p>}
+      {file.notes && <p className="text-[10px] text-slate-400 mt-1">{file.notes}</p>}
+      <div className="flex gap-2 mt-3">
+        <button className="flex items-center gap-1 px-3 py-1.5 bg-primary/8 text-primary rounded-xl text-[11px] font-bold hover:bg-primary/15 transition-colors" onClick={download}>
+          <span className="material-symbols-outlined text-sm">download</span>Download
+        </button>
+        {canDel && (
+          <button className="p-1.5 rounded-xl bg-error-container/50 text-on-error-container hover:bg-error-container transition-colors" onClick={remove} disabled={del}>
+            {del ? <Spin/> : <span className="material-symbols-outlined text-sm">delete</span>}
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* ════════════════════════════════════════════════════
+   UPLOAD ZONE
+════════════════════════════════════════════════════ */
+function UploadZone({ patientId, doctorId, onDone }) {
+  const toast = useToast();
+  const [drag, setDrag] = useState(false);
+  const [sel, setSel] = useState(null);
+  const [tp, setTp] = useState('other');
+  const [notes, setNotes] = useState('');
+  const [busy, setBusy] = useState(false);
+  const inp = useRef();
+
+  const go = async () => {
+    if (!sel) { toast('Select a file first','warning'); return; }
+    setBusy(true);
+    try {
+      const fd = new FormData();
+      fd.append('file',sel); fd.append('type',tp); fd.append('notes',notes);
+      if (patientId) fd.append('patientId',patientId);
+      if (doctorId)  fd.append('doctorId',doctorId);
+      const res = await api.files.upload(fd);
+      toast('File uploaded successfully','success'); setSel(null); setNotes(''); onDone(res.file);
+    } catch(e) { toast(errMsg(e),'error'); } finally { setBusy(false); }
+  };
+
+  return (
+    <div className="mb-6">
+      <div
+        className={`border-2 border-dashed rounded-3xl p-10 text-center cursor-pointer transition-all ${drag||sel?'border-primary bg-primary/5':'border-outline-variant hover:border-primary/50 hover:bg-primary/3'}`}
+        onClick={()=>inp.current.click()}
+        onDragOver={e=>{e.preventDefault();setDrag(true)}}
+        onDragLeave={()=>setDrag(false)}
+        onDrop={e=>{e.preventDefault();setDrag(false);const f=e.dataTransfer.files[0];if(f)setSel(f)}}
+      >
+        <span className={`material-symbols-outlined text-4xl mb-3 block ${sel?'text-primary':'text-slate-300'}`}>cloud_upload</span>
+        <h4 className="text-sm font-extrabold text-on-surface mb-1">{sel ? sel.name : 'Drop a file or click to browse'}</h4>
+        <p className="text-xs text-slate-400">PDF, JPG, PNG, DOC, DOCX — max 25 MB</p>
+        <input ref={inp} type="file" className="hidden" accept=".pdf,.jpg,.jpeg,.png,.doc,.docx" onChange={e=>setSel(e.target.files[0])} />
+      </div>
+      {sel && (
+        <div className="flex gap-3 mt-3 flex-wrap items-end">
+          <div className="flex-1 min-w-[160px]">
+            <label className={labelCls}>File Type</label>
+            <select className={inputCls} value={tp} onChange={e=>setTp(e.target.value)}>
+              <option value="prescription">Prescription</option>
+              <option value="report">Medical Report</option>
+              <option value="test">Lab Test</option>
+              <option value="xray">X-Ray</option>
+              <option value="scan">Scan / MRI</option>
+              <option value="other">Other</option>
+            </select>
+          </div>
+          <div className="flex-[2] min-w-[200px]">
+            <label className={labelCls}>Notes (optional)</label>
+            <input className={inputCls} placeholder="e.g. Blood test June 2024" value={notes} onChange={e=>setNotes(e.target.value)}/>
+          </div>
+          <button className={btnPrimary} onClick={go} disabled={busy}>
+            {busy ? <><Spin/>Uploading…</> : <><span className="material-symbols-outlined text-lg">upload</span>Upload</>}
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ════════════════════════════════════════════════════
+   CHAT INTERFACE
+════════════════════════════════════════════════════ */
+function ChatInterface({ connection, currentUser }) {
+  const toast = useToast();
+  const [msgs, setMsgs] = useState([]);
+  const [input, setInput] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [sending, setSending] = useState(false);
+  const bottom = useRef();
+  const timer = useRef();
+
+  const load = useCallback(async () => {
+    try { const d = await api.messages.list(getId(connection)); setMsgs(d.messages||[]); }
+    catch { /* silent */ } finally { setLoading(false); }
+  }, [getId(connection)]);
+
+  useEffect(() => { load(); timer.current=setInterval(load,4000); return ()=>clearInterval(timer.current); }, [load]);
+  useEffect(() => { if (bottom.current) bottom.current.scrollIntoView({behavior:'smooth'}); }, [msgs]);
+
+  const send = async () => {
+    if (!input.trim()) return;
+    setSending(true);
+    try {
+      const d = await api.messages.send({ connectionId: getId(connection), content: input.trim() });
+      setMsgs(p=>[...p, d.message]); setInput('');
+    } catch(e) { toast(errMsg(e),'error'); } finally { setSending(false); }
+  };
+
+  if (loading) return <div className="flex items-center justify-center h-64 gap-3 text-slate-400"><Spin size="lg"/><span className="text-sm">Loading messages…</span></div>;
+
+  return (
+    <div className="flex flex-col h-full">
+      <div className="flex-1 overflow-y-auto no-scrollbar p-4 space-y-4">
+        {msgs.length===0 && (
+          <div className="flex flex-col items-center justify-center h-32 text-slate-300">
+            <span className="material-symbols-outlined text-5xl mb-2">chat_bubble</span>
+            <p className="text-sm font-medium">Start the conversation</p>
+          </div>
+        )}
+        {msgs.map(m => {
+          const mine = getId(m.senderId)===getId(currentUser)||m.senderId===getId(currentUser)||getId(m.sender)===getId(currentUser);
+          return (
+            <div key={m.id||m._id} className={`flex gap-2 ${mine?'flex-row-reverse':''} max-w-[80%] ${mine?'ml-auto':''}`}>
+              <div className={`p-4 text-sm leading-relaxed ${mine?'chat-bubble-out text-white':'chat-bubble-in text-on-surface'}`}>
+                {m.content}
+                <p className={`text-[10px] mt-1 ${mine?'text-white/60':'text-slate-400'} text-right`}>
+                  {new Date(m.createdAt).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'})}
+                </p>
+              </div>
+            </div>
+          );
+        })}
+        <div ref={bottom}/>
+      </div>
+      <div className="border-t border-outline-variant pt-3 px-4 pb-4">
+        <div className="flex items-center gap-3 bg-surface-container-low rounded-2xl p-2 pl-4">
+          <input
+            className="flex-1 bg-transparent border-none text-sm focus:ring-0 outline-none font-body placeholder:text-slate-400"
+            placeholder="Type your message…"
+            value={input}
+            onChange={e=>setInput(e.target.value)}
+            onKeyDown={e=>e.key==='Enter'&&!e.shiftKey&&(e.preventDefault(),send())}
+            disabled={sending}
+          />
+          <button className="w-10 h-10 bg-primary text-white rounded-xl flex items-center justify-center shadow-lg shadow-primary/20 active:scale-95 transition-all disabled:opacity-50" onClick={send} disabled={sending||!input.trim()}>
+            {sending?<Spin/>:<span className="material-symbols-outlined">send</span>}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ════════════════════════════════════════════════════
+   AUTH PAGE  (Clinical Sanctuary modal style)
+════════════════════════════════════════════════════ */
+function AuthPage({ onAuth }) {
+  const toast = useToast();
+  const [tab, setTab] = useState('login');
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState('');
+  const [li, setLi] = useState({ email:'', password:'' });
+  const [reg, setReg] = useState({ name:'', email:'', confirmEmail:'', password:'', role:'' });
+  const [rErr, setRErr] = useState({});
+
+  const login = async e => {
+    e.preventDefault(); setErr(''); setBusy(true);
+    try { const d=await api.auth.login(li); localStorage.setItem('mb_auth',JSON.stringify(d)); onAuth(d); }
+    catch(e) { setErr(errMsg(e)); } finally { setBusy(false); }
+  };
+
+  const register = async e => {
+    e.preventDefault();
+    const errs={};
+    if (!reg.name.trim()) errs.name='Name is required';
+    if (reg.email!==reg.confirmEmail) errs.confirmEmail="Emails don't match";
+    if (reg.password.length<8) errs.password='Min 8 characters';
+    if (!reg.role) errs.role='Select a role';
+    setRErr(errs);
+    if (Object.keys(errs).length) return;
+    setBusy(true); setErr('');
+    try {
+      const d=await api.auth.register({email:reg.email,password:reg.password,name:reg.name,role:reg.role});
+      localStorage.setItem('mb_auth',JSON.stringify(d)); toast('Welcome to MediBhavan!','success'); onAuth(d);
+    } catch(e) { setErr(errMsg(e)); } finally { setBusy(false); }
+  };
+
+  return (
+    <div className="min-h-screen auth-bg flex items-center justify-center p-4">
+      {/* Floating background orbs */}
+      <div className="fixed top-0 left-1/4 w-96 h-96 bg-primary/5 rounded-full blur-3xl pointer-events-none"></div>
+      <div className="fixed bottom-0 right-1/4 w-80 h-80 bg-violet-300/10 rounded-full blur-3xl pointer-events-none"></div>
+
+      <div className="pop w-full max-w-4xl bg-surface-container-lowest rounded-[2.5rem] shadow-2xl overflow-hidden flex">
+        {/* Left — violet panel */}
+        <div className="hidden md:flex w-5/12 bg-gradient-to-br from-primary via-primary-container to-violet-700 p-12 text-white flex-col justify-between">
+          <div>
+            <div className="w-14 h-14 bg-white/15 rounded-2xl flex items-center justify-center mb-8 shadow-xl">
+              <span className="material-symbols-outlined ms-fill text-3xl">medical_services</span>
+            </div>
+            <h2 className="text-4xl font-black leading-tight tracking-tight mb-4">Clinical<br/>Sanctuary</h2>
+            <p className="text-sm text-white/70 font-medium leading-relaxed">Secure, encrypted medical records management for modern healthcare teams.</p>
+          </div>
+          <div className="space-y-3">
+            {['End-to-end encrypted','Role-based access','Real-time messaging','HIPAA-aligned'].map(f=>(
+              <div key={f} className="flex items-center gap-3 text-sm text-white/80">
+                <span className="material-symbols-outlined ms-fill text-base text-white/60">check_circle</span>{f}
+              </div>
+            ))}
+            <p className="text-[10px] font-bold uppercase tracking-widest opacity-30 mt-6">MediBhavan · Secure Node</p>
+          </div>
+        </div>
+
+        {/* Right — form */}
+        <div className="flex-1 p-10 md:p-12 bg-white">
+          <div className="flex items-center gap-3 mb-8">
+            <div className="w-9 h-9 bg-primary rounded-xl flex items-center justify-center shadow-lg shadow-primary/25">
+              <span className="material-symbols-outlined ms-fill text-white text-lg">healing</span>
+            </div>
+            <span className="text-xl font-extrabold tracking-tight text-primary">MediBhavan</span>
+          </div>
+
+          {/* Tab toggle */}
+          <div className="flex bg-surface-container-low p-1 rounded-2xl mb-8">
+            <button className={`flex-1 py-2.5 rounded-xl text-sm font-bold transition-all ${tab==='login'?'bg-white shadow-sm text-primary':'text-slate-500 hover:text-slate-700'}`} onClick={()=>{setTab('login');setErr('');}}>Sign In</button>
+            <button className={`flex-1 py-2.5 rounded-xl text-sm font-bold transition-all ${tab==='register'?'bg-white shadow-sm text-primary':'text-slate-500 hover:text-slate-700'}`} onClick={()=>{setTab('register');setErr('');}}>Create Account</button>
+          </div>
+
+          {err && (
+            <div className="flex items-center gap-3 p-3 bg-error-container/30 text-on-error-container rounded-2xl mb-5 text-sm font-medium">
+              <span className="material-symbols-outlined ms-fill text-error">error</span>{err}
+            </div>
+          )}
+
+          {tab==='login' ? (
+            <form onSubmit={login} className="space-y-4 anim-up">
+              <h3 className="text-2xl font-extrabold tracking-tight">Welcome back</h3>
+              <p className="text-sm text-slate-500 mb-6">Sign in to access your clinical records</p>
+              <div>
+                <label className={labelCls}>Clinical Identifier</label>
+                <input className={inputCls} type="email" placeholder="you@clinic.com" required value={li.email} onChange={e=>setLi(p=>({...p,email:e.target.value}))}/>
+              </div>
+              <div>
+                <label className={labelCls}>Access Key</label>
+                <input className={inputCls} type="password" placeholder="••••••••" required value={li.password} onChange={e=>setLi(p=>({...p,password:e.target.value}))}/>
+              </div>
+              <button type="submit" className={`w-full py-4 mt-2 ${btnPrimary} text-base`} disabled={busy}>
+                {busy?<><Spin/>Authenticating…</>:<>Authenticate Session</>}
+              </button>
+            </form>
+          ) : (
+            <form onSubmit={register} className="space-y-3 anim-up">
+              <h3 className="text-2xl font-extrabold tracking-tight">Join MediBhavan</h3>
+              <p className="text-sm text-slate-500 mb-4">Create your secure clinical account</p>
+              <div>
+                <label className={labelCls}>Full Name</label>
+                <input className={inputCls} type="text" placeholder="Dr. Smith / Jane Doe" required value={reg.name} onChange={e=>setReg(p=>({...p,name:e.target.value}))}/>
+                {rErr.name&&<p className="text-xs text-error mt-1 font-medium">{rErr.name}</p>}
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className={labelCls}>Email</label>
+                  <input className={inputCls} type="email" placeholder="Email" required value={reg.email} onChange={e=>setReg(p=>({...p,email:e.target.value}))}/>
+                </div>
+                <div>
+                  <label className={labelCls}>Confirm Email</label>
+                  <input className={inputCls} type="email" placeholder="Confirm" required value={reg.confirmEmail} onChange={e=>setReg(p=>({...p,confirmEmail:e.target.value}))}/>
+                  {rErr.confirmEmail&&<p className="text-xs text-error mt-1 font-medium">{rErr.confirmEmail}</p>}
+                </div>
+              </div>
+              <div>
+                <label className={labelCls}>Password</label>
+                <input className={inputCls} type="password" placeholder="Min 8 characters" required value={reg.password} onChange={e=>setReg(p=>({...p,password:e.target.value}))}/>
+                {rErr.password&&<p className="text-xs text-error mt-1 font-medium">{rErr.password}</p>}
+              </div>
+              <div>
+                <label className={labelCls}>I am a</label>
+                <div className="grid grid-cols-2 gap-3">
+                  {[{v:'patient',i:'personal_injury',l:'Patient',d:'I need care'},{v:'doctor',i:'stethoscope',l:'Doctor',d:'I provide care'}].map(opt=>(
+                    <div key={opt.v}
+                      className={`p-4 rounded-2xl border-2 text-center cursor-pointer transition-all ${reg.role===opt.v?'border-primary bg-primary/5':'border-outline-variant hover:border-primary/40'}`}
+                      onClick={()=>setReg(p=>({...p,role:opt.v}))}>
+                      <span className={`material-symbols-outlined ms-fill text-2xl block mb-1 ${reg.role===opt.v?'text-primary':'text-slate-400'}`}>{opt.i}</span>
+                      <p className="text-xs font-extrabold">{opt.l}</p>
+                      <p className="text-[10px] text-slate-400 mt-0.5">{opt.d}</p>
+                    </div>
+                  ))}
+                </div>
+                {rErr.role&&<p className="text-xs text-error mt-1 font-medium">{rErr.role}</p>}
+              </div>
+              <button type="submit" className={`w-full py-4 mt-1 ${btnPrimary} text-base`} disabled={busy}>
+                {busy?<><Spin/>Creating account…</>:<>Create Account</>}
+              </button>
+            </form>
+          )}
+          <p className="text-center text-xs text-slate-400 mt-5">🔒 All data encrypted end-to-end · HIPAA-aligned</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ════════════════════════════════════════════════════
+   SIDEBAR NAV
+════════════════════════════════════════════════════ */
+function Sidebar({ user, page, setPage, onLogout, unread, connections, setConnections, setSelectedConn }) {
+  const toast = useToast();
+  const isDoc = user.role==='doctor';
+  const [tid, setTid] = useState('');
+  const [busy, setBusy] = useState(false);
+  const pal = avPalette(user.name);
+
+  const navItems = isDoc
+    ? [{p:'home',i:'dashboard',l:'Overview'},{p:'patients',i:'group',l:'Patients'},{p:'records',i:'folder_open',l:'Records'},{p:'appointments',i:'event',l:'Appointments'},{p:'messages',i:'chat_bubble',l:'Messages'},{p:'settings',i:'settings',l:'Settings'}]
+    : [{p:'home',i:'dashboard',l:'Overview'},{p:'records',i:'folder_open',l:'My Records'},{p:'appointments',i:'event',l:'Appointments'},{p:'doctors',i:'medical_services',l:'My Doctors'},{p:'messages',i:'chat_bubble',l:'Messages'},{p:'settings',i:'settings',l:'Settings'}];
+
+  const connect = async () => {
+    if (!tid.trim()) return;
+    setBusy(true);
+    try {
+      const d = await api.connections.create({ targetUserId: tid.trim() });
+      const exists = connections.find(x=>getId(x)===getId(d.connection));
+      if (!exists) setConnections(p=>[d.connection,...p]);
+      const name = (isDoc?connPatient(d.connection):connDoctor(d.connection))?.name || 'user';
+      toast(`Connected with ${name}`,'success'); setTid('');
+    } catch(e) { toast(errMsg(e),'error'); } finally { setBusy(false); }
+  };
+
+  const isActive = p => page===p || (p==='patients'&&page==='detail'&&isDoc) || (p==='doctors'&&page==='detail'&&!isDoc);
+
+  return (
+    <aside className="h-screen w-72 flex-col fixed left-0 top-0 bg-slate-50 flex flex-col p-5 z-50 border-r border-outline-variant/40">
+      {/* Brand */}
+      <div className="flex items-center gap-3 mb-8 px-2">
+        <div className="w-10 h-10 bg-primary rounded-xl flex items-center justify-center text-white shadow-lg shadow-primary/25">
+          <span className="material-symbols-outlined ms-fill text-xl">medical_services</span>
+        </div>
+        <div>
+          <h1 className="text-xl font-extrabold tracking-tight text-violet-700">MediBhavan</h1>
+          <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest">{isDoc?'Clinical Portal':'Patient Portal'}</p>
+        </div>
+      </div>
+
+      {/* Nav */}
+      <nav className="flex-1 space-y-1">
+        {navItems.map(item => (
+          <button key={item.p}
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-semibold text-sm transition-all duration-200 active:opacity-80 ${isActive(item.p)?'bg-violet-100/60 text-violet-700':'text-slate-500 hover:text-slate-800 hover:bg-slate-100/80'}`}
+            onClick={()=>setPage(item.p)}>
+            <span className={`material-symbols-outlined ${isActive(item.p)?'ms-fill':''}`}>{item.i}</span>
+            <span>{item.l}</span>
+            {item.p==='messages'&&unread>0&&<span className="ml-auto w-5 h-5 bg-error text-white rounded-full text-[10px] font-black flex items-center justify-center">{unread}</span>}
+          </button>
+        ))}
+      </nav>
+
+      {/* Connect input */}
+      <div className="my-4 pt-4 border-t border-slate-200">
+        <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-2 px-1">
+          Connect with {isDoc?'Patient':'Doctor'}
+        </p>
+        <div className="flex gap-2">
+          <input className="flex-1 px-3 py-2 bg-white border border-outline-variant rounded-xl text-xs focus:ring-2 focus:ring-primary/20 outline-none"
+            placeholder={isDoc?'Patient ID (P_…)':'Doctor ID (Dr_…)'}
+            value={tid} onChange={e=>setTid(e.target.value)}
+            onKeyDown={e=>e.key==='Enter'&&connect()}
+          />
+          <button className="px-3 py-2 bg-primary text-white rounded-xl text-xs font-bold shadow-sm hover:bg-primary-container transition-all active:scale-95 disabled:opacity-50"
+            onClick={connect} disabled={busy}>
+            {busy?<Spin/>:<span className="material-symbols-outlined text-sm">link</span>}
+          </button>
+        </div>
+      </div>
+
+      {/* Connections quick list */}
+      {connections.length>0 && (
+        <div className="max-h-36 overflow-y-auto no-scrollbar space-y-1 mb-4">
+          {connections.slice(0,5).map(conn=>{
+            const other = isDoc?connPatient(conn):connDoctor(conn);
+            const pal2 = avPalette(other?.name);
+            return (
+              <button key={getId(conn)}
+                className="w-full flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-slate-100 transition-colors"
+                onClick={()=>{setSelectedConn(conn);setPage('detail');}}>
+                <div className={`w-7 h-7 rounded-full ${pal2} flex items-center justify-center text-[10px] font-black flex-shrink-0`}>{initials(other?.name)}</div>
+                <div className="flex-1 min-w-0 text-left">
+                  <p className="text-xs font-bold truncate text-on-surface">{other?.name}</p>
+                  <p className="text-[10px] text-slate-400 truncate">{other?.userId||other?.specialization}</p>
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Profile bar */}
+      <div className="mt-auto">
+        <button className="w-full py-4 px-4 bg-gradient-to-br from-primary to-primary-container text-white rounded-2xl font-bold flex items-center justify-center gap-2 shadow-xl shadow-primary/15 hover:shadow-primary/30 transition-all active:scale-95 mb-3 text-sm"
+          onClick={()=>setPage('appointments')}>
+          <span className="material-symbols-outlined">add_circle</span>
+          {isDoc?'New Consultation':'Book Appointment'}
+        </button>
+        <div className="p-3 bg-white rounded-2xl border border-outline-variant/40 flex items-center gap-3">
+          <div className={`w-9 h-9 rounded-lg ${pal} flex items-center justify-center text-xs font-extrabold flex-shrink-0`}>{initials(user.name)}</div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-extrabold truncate">{user.name}</p>
+            <p className="text-[10px] text-slate-400 truncate font-mono">{user.userId}</p>
+          </div>
+          <button className="text-slate-400 hover:text-error transition-colors" onClick={onLogout} title="Sign out">
+            <span className="material-symbols-outlined">logout</span>
+          </button>
+        </div>
+      </div>
+    </aside>
+  );
+}
+
+/* ════════════════════════════════════════════════════
+   TOP BAR
+════════════════════════════════════════════════════ */
+function Topbar({ title, subtitle }) {
+  return (
+    <header className="sticky top-0 z-40 w-full bg-white/80 backdrop-blur-xl flex justify-between items-center h-18 px-8 py-4 shadow-[0_4px_24px_0_rgba(25,28,30,0.04)] border-b border-outline-variant/30">
+      <div className="flex items-center gap-4 flex-1">
+        <div>
+          <h2 className="text-lg font-extrabold tracking-tight text-on-surface">{title}</h2>
+          {subtitle && <p className="text-xs text-on-surface-variant font-medium">{subtitle}</p>}
+        </div>
+      </div>
+      <div className="flex items-center gap-3">
+        <div className="relative w-72 group">
+          <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-primary transition-colors">search</span>
+          <input className="w-full pl-11 pr-4 py-2.5 bg-surface-container-low border-none rounded-2xl text-sm focus:ring-2 focus:ring-primary/20 focus:bg-white transition-all outline-none" placeholder="Search patients, records…" type="text"/>
+        </div>
+        <button className="p-2.5 rounded-xl text-slate-500 hover:bg-slate-100 transition-colors">
+          <span className="material-symbols-outlined">notifications</span>
+        </button>
+      </div>
+    </header>
+  );
+}
+
+/* ════════════════════════════════════════════════════
+   DOCTOR HOME
+════════════════════════════════════════════════════ */
+function DocHome({ auth, connections, setPage, setSelectedConn }) {
+  const [appts, setAppts] = useState([]);
+  const [files, setFiles] = useState([]);
+  useEffect(()=>{
+    api.appointments.list('pending').then(d=>setAppts((d.appointments||[]).slice(0,3))).catch(()=>{});
+  },[]);
+
+  return (
+    <div className="p-8 space-y-8 max-w-7xl mx-auto w-full anim-up">
+      {/* Welcome */}
+      <section className="flex flex-col md:flex-row gap-6 items-end">
+        <div className="flex-1">
+          <h2 className="text-4xl font-extrabold tracking-tight text-on-surface mb-2">
+            Welcome back, {auth.user.name.split(' ').slice(-1)[0]}
+          </h2>
+          <p className="text-on-surface-variant font-medium max-w-xl">
+            You have {connections.length} active {connections.length===1?'patient':'patients'} and {appts.length} pending {appts.length===1?'appointment':'appointments'} today.
+          </p>
+        </div>
+        <div className="px-6 py-4 bg-surface-container-low rounded-2xl flex items-center gap-4">
+          <div className="p-3 bg-tertiary/10 text-tertiary rounded-xl">
+            <span className="material-symbols-outlined">trending_up</span>
+          </div>
+          <div>
+            <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">Active Patients</p>
+            <p className="text-2xl font-black">{connections.length}</p>
+          </div>
+        </div>
+      </section>
+
+      {/* Bento Grid */}
+      <div className="grid grid-cols-12 gap-6">
+        {/* Stats hero */}
+        <div className="col-span-12 lg:col-span-8 bg-surface-container-lowest rounded-3xl p-8 relative overflow-hidden group bento-hover">
+          <div className="absolute top-0 right-0 p-8">
+            <span className="text-slate-100 text-9xl font-black select-none pointer-events-none group-hover:text-slate-200/60 transition-colors">01</span>
+          </div>
+          <div className="relative z-10">
+            <h3 className="text-xl font-extrabold mb-8">Clinical Overview</h3>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              {[
+                {i:'group',v:connections.length,l:'Patients',c:'text-primary',bg:'bg-primary/8'},
+                {i:'event',v:appts.length,l:'Pending Appts',c:'text-amber-600',bg:'bg-amber-50'},
+                {i:'folder_open',v:connections.length*2,l:'Files Shared',c:'text-emerald-600',bg:'bg-emerald-50'},
+                {i:'chat_bubble',v:'Live',l:'Secure Chat',c:'text-sky-600',bg:'bg-sky-50'},
+              ].map(s=>(
+                <div key={s.l} className="p-4 bg-surface-container-low rounded-2xl">
+                  <div className={`w-10 h-10 ${s.bg} ${s.c} rounded-xl flex items-center justify-center mb-3`}>
+                    <span className="material-symbols-outlined">{s.i}</span>
+                  </div>
+                  <p className="text-2xl font-extrabold">{s.v}</p>
+                  <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">{s.l}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Immediate Actions */}
+        <div className="col-span-12 lg:col-span-4 bg-primary text-white rounded-3xl p-8 flex flex-col bento-hover">
+          <h3 className="text-xl font-bold mb-6">Quick Actions</h3>
+          <div className="space-y-3 flex-1">
+            {[
+              {i:'upload_file',t:'Upload Record',s:'Add a new file for a patient'},
+              {i:'add_call',t:'New Appointment',s:'Schedule a consultation'},
+            ].map(a=>(
+              <button key={a.t} className="w-full p-4 bg-white/10 rounded-2xl flex items-center gap-4 hover:bg-white/20 transition-all text-left"
+                onClick={()=>setPage(a.t.includes('Appoint')?'appointments':'records')}>
+                <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center flex-shrink-0">
+                  <span className="material-symbols-outlined">{a.i}</span>
+                </div>
+                <div><p className="font-bold text-sm">{a.t}</p><p className="text-xs text-white/60">{a.s}</p></div>
+                <span className="material-symbols-outlined ml-auto text-white/40">chevron_right</span>
+              </button>
+            ))}
+          </div>
+          <button className="mt-6 w-full py-3 bg-white text-primary font-bold rounded-xl hover:bg-opacity-90 transition-all text-sm"
+            onClick={()=>setPage('appointments')}>View All Appointments</button>
+        </div>
+
+        {/* Recent Patients */}
+        <div className="col-span-12 md:col-span-7 bg-surface-container-lowest rounded-3xl p-8 bento-hover">
+          <div className="flex justify-between items-center mb-6">
+            <div>
+              <h3 className="text-xl font-extrabold">Recent Patients</h3>
+              <p className="text-sm text-slate-500">Track your most recent diagnostic reviews</p>
+            </div>
+            <button className="text-primary font-bold text-sm hover:underline" onClick={()=>setPage('patients')}>View All</button>
+          </div>
+          <div className="space-y-2">
+            {connections.length===0 ? <Empty icon="group" title="No patients yet" msg="Enter a Patient ID in the sidebar to connect"/> :
+              connections.slice(0,4).map(conn=>{
+                const p=connPatient(conn); const pal=avPalette(p?.name);
+                return (
+                  <button key={getId(conn)}
+                    className="group w-full flex items-center gap-4 p-4 rounded-2xl hover:bg-surface-container-low transition-all text-left"
+                    onClick={()=>{setSelectedConn(conn);setPage('detail');}}>
+                    <div className={`w-12 h-12 rounded-full ${pal} flex items-center justify-center font-extrabold flex-shrink-0`}>{initials(p?.name)}</div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-extrabold text-on-surface">{p?.name}</p>
+                      <p className="text-xs text-on-surface-variant">{p?.userId} · {p?.bloodGroup||'General'}</p>
+                    </div>
+                    <span className="material-symbols-outlined text-slate-300 group-hover:text-primary transition-colors">chevron_right</span>
+                  </button>
+                );
+              })
+            }
+          </div>
+        </div>
+
+        {/* Records Vault */}
+        <div className="col-span-12 md:col-span-5 bg-gradient-to-br from-violet-50 to-indigo-50 rounded-3xl p-8 relative overflow-hidden bento-hover">
+          <div className="relative z-10 flex flex-col h-full">
+            <h3 className="text-xl font-extrabold mb-2">Secure Records Vault</h3>
+            <p className="text-sm text-slate-600 mb-6 leading-relaxed">Encrypted end-to-end clinical data management.</p>
+            <div className="mt-auto space-y-3">
+              {[{i:'description',n:'Prescriptions',s:'Share with patients'},{i:'science',n:'Lab Tests',s:'Upload test results'}].map(r=>(
+                <div key={r.n} className="p-4 bg-white/60 backdrop-blur-md rounded-2xl flex items-center gap-4 border border-white/40">
+                  <span className="material-symbols-outlined ms-fill text-primary">{r.i}</span>
+                  <div className="flex-1"><p className="text-xs font-bold">{r.n}</p><p className="text-[10px] text-slate-500">{r.s}</p></div>
+                </div>
+              ))}
+            </div>
+            <button className="mt-4 flex items-center justify-center gap-2 py-3 bg-primary/10 text-primary font-bold rounded-xl hover:bg-primary/20 transition-all border border-primary/20 text-sm"
+              onClick={()=>setPage('records')}>
+              <span className="material-symbols-outlined">cloud_upload</span>Upload New Record
+            </button>
+          </div>
+          <div className="absolute -bottom-10 -right-10 w-40 h-40 bg-primary/10 rounded-full blur-3xl"></div>
+          <div className="absolute -top-10 -left-10 w-32 h-32 bg-indigo-400/10 rounded-full blur-2xl"></div>
+        </div>
+
+        {/* Appointments schedule */}
+        {appts.length>0 && (
+          <div className="col-span-12 bg-surface-container-lowest rounded-3xl p-8 bento-hover">
+            <div className="flex justify-between items-center mb-6">
+              <div>
+                <h3 className="text-2xl font-extrabold tracking-tight">Schedule Oversight</h3>
+                <p className="text-slate-500 font-medium text-sm">Upcoming appointments</p>
+              </div>
+              <button className="text-primary font-bold text-sm hover:underline" onClick={()=>setPage('appointments')}>View All</button>
+            </div>
+            <div className="space-y-3">
+              {appts.map(a=>{
+                const d=new Date(a.date); const pat=a.patient||a.patientId;
+                return (
+                  <div key={getId(a)} className="grid grid-cols-12 items-center p-5 bg-surface-container-low/60 hover:bg-surface-container-low rounded-2xl transition-all border border-transparent hover:border-primary/10">
+                    <div className="col-span-2">
+                      <p className="text-lg font-black text-primary">{fmtTime(a.time)}</p>
+                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">{a.type}</p>
+                    </div>
+                    <div className="col-span-4 flex items-center gap-3">
+                      <div className={`w-11 h-11 rounded-xl ${avPalette(pat?.name)} flex items-center justify-center font-extrabold text-sm`}>{initials(pat?.name)}</div>
+                      <div><p className="font-extrabold text-sm">{pat?.name}</p><p className="text-xs text-slate-500">{pat?.userId}</p></div>
+                    </div>
+                    <div className="col-span-3">
+                      <p className="text-sm font-medium text-slate-600">{fmtDate(a.date)}</p>
+                    </div>
+                    <div className="col-span-3 flex justify-end">
+                      <span className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest ${APPT_BADGE[a.status]||APPT_BADGE.pending}`}>{a.status}</span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* ════════════════════════════════════════════════════
+   PATIENT HOME
+════════════════════════════════════════════════════ */
+function PatHome({ auth, connections, setPage, setSelectedConn }) {
+  const [files, setFiles] = useState([]);
+  const [appts, setAppts] = useState([]);
+  useEffect(()=>{
+    api.files.listMy().then(d=>setFiles((d.files||[]).slice(0,4))).catch(()=>{});
+    api.appointments.list().then(d=>setAppts((d.appointments||[]).filter(a=>a.status!=='cancelled').slice(0,3))).catch(()=>{});
+  },[]);
+
+  return (
+    <div className="p-8 space-y-8 max-w-7xl mx-auto w-full anim-up">
+      <section className="flex flex-col md:flex-row gap-6 items-end">
+        <div className="flex-1">
+          <h2 className="text-4xl font-extrabold tracking-tight mb-2">Hello, {auth.user.name.split(' ')[0]}</h2>
+          <p className="text-on-surface-variant font-medium max-w-xl">You have {files.length} medical file{files.length!==1?'s':''} and {appts.length} upcoming appointment{appts.length!==1?'s':''}.</p>
+        </div>
+        <div className="px-6 py-4 bg-surface-container-low rounded-2xl flex items-center gap-4">
+          <div className="p-3 bg-emerald-100 text-emerald-700 rounded-xl">
+            <span className="material-symbols-outlined">shield</span>
+          </div>
+          <div>
+            <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">Your Records</p>
+            <p className="text-2xl font-black">{files.length} Files</p>
+          </div>
+        </div>
+      </section>
+
+      <div className="grid grid-cols-12 gap-6">
+        <div className="col-span-12 lg:col-span-8 bg-surface-container-lowest rounded-3xl p-8 bento-hover">
+          <div className="absolute top-0 right-0 p-8 pointer-events-none select-none">
+            <span className="text-slate-100 text-9xl font-black">02</span>
+          </div>
+          <h3 className="text-xl font-extrabold mb-6">Health Summary</h3>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            {[
+              {i:'folder_open',v:files.length,l:'My Files',c:'text-primary',bg:'bg-primary/8'},
+              {i:'medical_services',v:connections.length,l:'Doctors',c:'text-emerald-600',bg:'bg-emerald-50'},
+              {i:'event',v:appts.length,l:'Appointments',c:'text-amber-600',bg:'bg-amber-50'},
+              {i:'security',v:'Safe',l:'Encrypted',c:'text-sky-600',bg:'bg-sky-50'},
+            ].map(s=>(
+              <div key={s.l} className="p-4 bg-surface-container-low rounded-2xl">
+                <div className={`w-10 h-10 ${s.bg} ${s.c} rounded-xl flex items-center justify-center mb-3`}>
+                  <span className="material-symbols-outlined">{s.i}</span>
+                </div>
+                <p className="text-2xl font-extrabold">{s.v}</p>
+                <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">{s.l}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="col-span-12 lg:col-span-4 bg-gradient-to-br from-emerald-500 to-teal-600 text-white rounded-3xl p-8 flex flex-col bento-hover">
+          <h3 className="text-xl font-bold mb-4">Your Doctors</h3>
+          {connections.length===0 ? (
+            <div className="flex-1 flex flex-col items-center justify-center text-center">
+              <span className="material-symbols-outlined text-4xl text-white/40 mb-2">medical_services</span>
+              <p className="text-sm text-white/70">Enter your doctor's ID in the sidebar to connect</p>
+            </div>
+          ) : (
+            <div className="space-y-3 flex-1">
+              {connections.slice(0,3).map(conn=>{
+                const d=connDoctor(conn);
+                return (
+                  <button key={getId(conn)} className="w-full p-4 bg-white/15 rounded-2xl flex items-center gap-3 hover:bg-white/25 transition-all text-left"
+                    onClick={()=>{setSelectedConn(conn);setPage('detail');}}>
+                    <div className="w-9 h-9 bg-white/20 rounded-full flex items-center justify-center text-xs font-extrabold flex-shrink-0">{initials(d?.name)}</div>
+                    <div><p className="font-bold text-sm">{d?.name}</p><p className="text-xs text-white/60">{d?.specialization||'General'}</p></div>
+                    <span className="material-symbols-outlined ml-auto text-white/40">chevron_right</span>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+          <button className="mt-4 w-full py-3 bg-white text-emerald-700 font-bold rounded-xl text-sm hover:bg-opacity-90 transition-all"
+            onClick={()=>setPage('doctors')}>Manage Doctors</button>
+        </div>
+
+        {/* Recent files */}
+        <div className="col-span-12 md:col-span-6 bg-surface-container-lowest rounded-3xl p-8 bento-hover">
+          <div className="flex justify-between items-center mb-6">
+            <div><h3 className="text-xl font-extrabold">Recent Files</h3><p className="text-sm text-slate-500">Your latest medical records</p></div>
+            <button className="text-primary font-bold text-sm hover:underline" onClick={()=>setPage('records')}>View All</button>
+          </div>
+          <div className="space-y-2">
+            {files.length===0 ? <Empty icon="folder_open" title="No files yet" msg="Upload your test results or wait for your doctor"/> :
+              files.map(f=>{
+                const fi=fInfo(f.type);
+                return (
+                  <div key={getId(f)} className="flex gap-3 items-center p-3 rounded-2xl hover:bg-surface-container-low transition-colors">
+                    <div className={`w-10 h-10 ${fi.bg} rounded-xl flex items-center justify-center flex-shrink-0`}>
+                      <span className={`material-symbols-outlined ms-fill ${fi.color}`}>{fi.icon}</span>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-extrabold truncate">{f.originalName}</p>
+                      <p className="text-[10px] text-slate-400">{fmtDate(f.createdAt)}</p>
+                    </div>
+                    <p className="text-[10px] text-slate-400">{fmtSize(f.size)}</p>
+                  </div>
+                );
+              })
+            }
+          </div>
+        </div>
+
+        {/* Upcoming appts */}
+        <div className="col-span-12 md:col-span-6 bg-surface-container-lowest rounded-3xl p-8 bento-hover">
+          <div className="flex justify-between items-center mb-6">
+            <div><h3 className="text-xl font-extrabold">Upcoming</h3><p className="text-sm text-slate-500">Your scheduled appointments</p></div>
+            <button className="text-primary font-bold text-sm hover:underline" onClick={()=>setPage('appointments')}>View All</button>
+          </div>
+          {appts.length===0 ? <Empty icon="event" title="No appointments" msg="Book one with your doctor"/> :
+            <div className="space-y-3">
+              {appts.map(a=>{
+                const d2=new Date(a.date); const dr=a.doctor||a.doctorId;
+                return (
+                  <div key={getId(a)} className="flex items-center gap-4 p-4 bg-surface-container-low rounded-2xl">
+                    <div className="w-12 h-12 bg-primary/10 rounded-xl flex flex-col items-center justify-center flex-shrink-0">
+                      <p className="text-sm font-black text-primary leading-none">{d2.getDate()}</p>
+                      <p className="text-[9px] text-primary/60 font-bold uppercase">{d2.toLocaleString('en',{month:'short'})}</p>
+                    </div>
+                    <div className="flex-1"><p className="text-xs font-extrabold">{dr?.name}</p><p className="text-[10px] text-slate-400">{fmtTime(a.time)} · {a.type}</p></div>
+                    <span className={`px-2 py-1 rounded-full text-[9px] font-bold uppercase tracking-widest ${APPT_BADGE[a.status]||APPT_BADGE.pending}`}>{a.status}</span>
+                  </div>
+                );
+              })}
+            </div>
+          }
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ════════════════════════════════════════════════════
+   RECORDS PAGE
+════════════════════════════════════════════════════ */
+function RecordsPage({ auth, connections, patientId, isDoc }) {
+  const toast = useToast();
+  const [files, setFiles] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [filter, setFilter] = useState('all');
+
+  const load = useCallback(()=>{
+    setLoading(true);
+    const req = isDoc
+      ? api.files.listForPatient(patientId, filter==='all'?null:filter)
+      : api.files.listMy(filter==='all'?null:filter);
+    req.then(d=>setFiles(d.files||[])).catch(e=>toast(errMsg(e),'error')).finally(()=>setLoading(false));
+  },[patientId, filter, isDoc]);
+
+  useEffect(()=>{ load(); },[load]);
+
+  const types = ['all','prescription','report','test','xray','scan','other'];
+
+  return (
+    <div className="p-8 max-w-7xl mx-auto w-full anim-up">
+      <UploadZone patientId={isDoc?patientId:null} doctorId={!isDoc&&connections[0]?getId(connDoctor(connections[0])):null} onDone={f=>setFiles(p=>[f,...p])}/>
+      <div className="flex gap-2 mb-6 flex-wrap">
+        {types.map(t=>(
+          <button key={t}
+            className={`px-4 py-1.5 rounded-full text-xs font-bold border transition-all ${filter===t?'bg-primary text-white border-primary shadow-sm shadow-primary/20':'border-outline-variant text-slate-500 hover:border-primary/40 hover:text-primary'}`}
+            onClick={()=>setFilter(t)}>
+            {t==='all'?'All types':t.charAt(0).toUpperCase()+t.slice(1)}
+          </button>
+        ))}
+      </div>
+      {loading ? <div className="flex items-center justify-center h-40 gap-3 text-slate-400"><Spin size="lg"/></div> :
+        files.length===0 ? <Empty icon="folder_open" title="No files" msg="Upload medical records to get started"/> :
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+          {files.map(f=><FileCard key={getId(f)} file={f} onDelete={id=>setFiles(p=>p.filter(x=>getId(x)!==id))}/>)}
+        </div>
+      }
+    </div>
+  );
+}
+
+/* ════════════════════════════════════════════════════
+   DETAIL PAGE (doctor-patient or patient-doctor)
+════════════════════════════════════════════════════ */
+function DetailPage({ auth, connection, onBack }) {
+  const [tab, setTab] = useState('files');
+  const isDoc = auth.user.role==='doctor';
+  const other = isDoc ? connPatient(connection) : connDoctor(connection);
+  const pal = avPalette(other?.name);
+  const otherId = getId(other);
+
+  return (
+    <div className="p-8 max-w-7xl mx-auto w-full anim-up">
+      {/* Header */}
+      <div className="flex items-center gap-4 mb-8 p-6 bg-surface-container-lowest rounded-3xl">
+        <button className={btnGhost} onClick={onBack}>
+          <span className="material-symbols-outlined">arrow_back</span>Back
+        </button>
+        <div className={`w-14 h-14 rounded-2xl ${pal} flex items-center justify-center text-lg font-black flex-shrink-0`}>{initials(other?.name)}</div>
+        <div>
+          <h2 className="text-2xl font-extrabold tracking-tight">{other?.name}</h2>
+          <p className="text-sm text-on-surface-variant">{other?.userId}{other?.specialization?` · ${other.specialization}`:''}</p>
+        </div>
+        {other?.bloodGroup&&<span className="px-3 py-1 bg-error-container text-on-error-container rounded-full text-xs font-bold ml-2">{other.bloodGroup}</span>}
+        {other?.allergies&&<span className="px-3 py-1 bg-amber-100 text-amber-700 rounded-full text-xs font-bold">⚠ {other.allergies}</span>}
+      </div>
+
+      {/* Tab bar */}
+      <div className="flex bg-surface-container-low p-1 rounded-2xl mb-6 w-fit">
+        {[{v:'files',i:'folder_open',l:'Medical Files'},{v:'chat',i:'chat_bubble',l:'Secure Chat'}].map(t=>(
+          <button key={t.v}
+            className={`flex items-center gap-2 px-6 py-2.5 rounded-xl font-bold text-sm transition-all ${tab===t.v?'bg-white shadow-sm text-primary':'text-slate-500 hover:text-slate-700'}`}
+            onClick={()=>setTab(t.v)}>
+            <span className="material-symbols-outlined text-base">{t.i}</span>{t.l}
+          </button>
+        ))}
+      </div>
+
+      {tab==='files' ? (
+        <RecordsPage auth={auth} connections={[connection]} patientId={isDoc?otherId:getId(connPatient(connection))} isDoc={isDoc}/>
+      ) : (
+        <div className="bg-surface-container-lowest rounded-3xl overflow-hidden" style={{height:'calc(100vh - 360px)'}}>
+          <ChatInterface connection={connection} currentUser={auth.user}/>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ════════════════════════════════════════════════════
+   MESSAGES PAGE (Clinical Sanctuary messenger style)
+════════════════════════════════════════════════════ */
+function MessagesPage({ auth, connections }) {
+  const [active, setActive] = useState(null);
+  const isDoc = auth.user.role==='doctor';
+
+  useEffect(()=>{ if (connections.length>0&&!active) setActive(connections[0]); },[connections]);
+
+  return (
+    <div className="p-8 max-w-7xl mx-auto w-full h-full anim-up">
+      <div className="bg-surface-container-lowest rounded-3xl overflow-hidden flex h-[calc(100vh-180px)]">
+        {/* Sidebar list */}
+        <div className="w-80 flex-shrink-0 border-r border-outline-variant/40 flex flex-col">
+          <div className="p-6 border-b border-outline-variant/40">
+            <h3 className="text-lg font-extrabold">Patient Messages</h3>
+          </div>
+          <div className="flex-1 overflow-y-auto no-scrollbar">
+            {connections.length===0 ? (
+              <div className="p-6 text-sm text-slate-400 text-center">No connections yet</div>
+            ) : connections.map(conn=>{
+              const other = isDoc?connPatient(conn):connDoctor(conn);
+              const pal = avPalette(other?.name);
+              const isActive = active&&getId(active)===getId(conn);
+              return (
+                <button key={getId(conn)}
+                  className={`w-full flex items-center gap-3 p-4 transition-colors text-left ${isActive?'bg-violet-50 border-l-4 border-primary':'hover:bg-slate-50 border-l-4 border-transparent'}`}
+                  onClick={()=>setActive(conn)}>
+                  <div className={`w-10 h-10 rounded-full ${pal} flex items-center justify-center font-bold text-sm flex-shrink-0`}>{initials(other?.name)}</div>
+                  <div className="flex-1 min-w-0">
+                    <p className={`text-sm font-bold truncate ${isActive?'text-primary':''}`}>{other?.name}</p>
+                    <p className={`text-xs truncate italic ${isActive?'text-primary/70 font-medium':'text-slate-400'}`}>{other?.userId}</p>
+                  </div>
+                  {isActive&&<div className="w-2 h-2 bg-primary rounded-full flex-shrink-0"></div>}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Chat area */}
+        <div className="flex-1 flex flex-col overflow-hidden">
+          {active ? (
+            <>
+              <div className="flex items-center justify-between px-6 py-4 border-b border-outline-variant/40">
+                {(() => {
+                  const other = isDoc?connPatient(active):connDoctor(active);
+                  const pal = avPalette(other?.name);
+                  return (
+                    <div className="flex items-center gap-3">
+                      <div className="relative">
+                        <div className={`w-10 h-10 rounded-full ${pal} flex items-center justify-center text-sm font-extrabold`}>{initials(other?.name)}</div>
+                        <span className="absolute bottom-0 right-0 w-3 h-3 bg-tertiary border-2 border-white rounded-full"></span>
+                      </div>
+                      <div>
+                        <p className="font-extrabold text-sm">{other?.name}</p>
+                        <p className="text-[10px] text-tertiary font-bold uppercase tracking-tighter">Active Now</p>
+                      </div>
+                    </div>
+                  );
+                })()}
+              </div>
+              <div className="flex-1 overflow-hidden">
+                <ChatInterface connection={active} currentUser={auth.user}/>
+              </div>
+            </>
+          ) : (
+            <div className="flex flex-col items-center justify-center h-full text-slate-300">
+              <span className="material-symbols-outlined text-6xl mb-3">chat_bubble_outline</span>
+              <p className="font-medium text-slate-400">Select a conversation</p>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ════════════════════════════════════════════════════
+   APPOINTMENTS PAGE
+════════════════════════════════════════════════════ */
+function AppointmentsPage({ auth, connections }) {
+  const toast = useToast();
+  const [appts, setAppts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [filter, setFilter] = useState('all');
+  const [modal, setModal] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [form, setForm] = useState({ connectionId:'', date:'', time:'', type:'consultation', notes:'' });
+  const isDoc = auth.user.role==='doctor';
+
+  const load = useCallback(()=>{
+    setLoading(true);
+    api.appointments.list(filter==='all'?null:filter).then(d=>setAppts(d.appointments||[])).catch(e=>toast(errMsg(e),'error')).finally(()=>setLoading(false));
+  },[filter]);
+  useEffect(()=>{ load(); },[load]);
+
+  const create = async () => {
+    if (!form.connectionId||!form.date||!form.time) { toast('Fill required fields','warning'); return; }
+    setSaving(true);
+    try { const d=await api.appointments.create(form); setAppts(p=>[d.appointment,...p]); toast('Appointment scheduled','success'); setModal(false); setForm({connectionId:'',date:'',time:'',type:'consultation',notes:''}); }
+    catch(e) { toast(errMsg(e),'error'); } finally { setSaving(false); }
+  };
+
+  const updateStatus = async (id, status) => {
+    try { const d=await api.appointments.update(id,{status}); setAppts(p=>p.map(a=>getId(a)===id?d.appointment:a)); toast(`Appointment ${status}`,'success'); }
+    catch(e) { toast(errMsg(e),'error'); }
+  };
+
+  const statuses = ['all','pending','confirmed','completed','cancelled'];
+
+  return (
+    <div className="p-8 max-w-7xl mx-auto w-full anim-up">
+      <div className="flex justify-between items-center mb-6">
+        <div>
+          <h2 className="text-2xl font-extrabold tracking-tight">Schedule Oversight</h2>
+          <p className="text-sm text-slate-500 font-medium">Manage all your clinical appointments</p>
+        </div>
+        <div className="flex items-center gap-3">
+          <div className="flex bg-surface-container-low p-1 rounded-xl">
+            {statuses.map(s=>(
+              <button key={s}
+                className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${filter===s?'bg-white shadow-sm text-primary':'text-slate-500 hover:text-slate-700'}`}
+                onClick={()=>setFilter(s)}>
+                {s.charAt(0).toUpperCase()+s.slice(1)}
+              </button>
+            ))}
+          </div>
+          {connections.length>0 && (
+            <button className={btnPrimary} onClick={()=>setModal(true)}>
+              <span className="material-symbols-outlined">add</span>New
+            </button>
+          )}
+        </div>
+      </div>
+
+      {loading ? <div className="flex items-center justify-center h-40"><Spin size="lg"/></div> :
+        appts.length===0 ? <Empty icon="event_busy" title="No appointments" msg="Schedule one using the button above" action={<button className={btnPrimary} onClick={()=>setModal(true)}><span className="material-symbols-outlined">add</span>Schedule</button>}/> :
+        <div className="space-y-3">
+          {appts.map(a=>{
+            const d2=new Date(a.date); const other=isDoc?(a.patient||a.patientId):(a.doctor||a.doctorId);
+            const pal = avPalette(other?.name);
+            return (
+              <div key={getId(a)} className="grid grid-cols-12 items-center p-5 bg-surface-container-lowest hover:bg-surface-container-low rounded-2xl transition-all border border-transparent hover:border-primary/10 group">
+                <div className="col-span-2">
+                  <p className="text-base font-black text-primary">{fmtTime(a.time)}</p>
+                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">{a.type}</p>
+                </div>
+                <div className="col-span-4 flex items-center gap-3">
+                  <div className={`w-11 h-11 rounded-xl ${pal} flex items-center justify-center font-extrabold text-sm`}>{initials(other?.name)}</div>
+                  <div><p className="font-extrabold text-sm">{other?.name}</p><p className="text-xs text-slate-500">{fmtDate(a.date)}</p></div>
+                </div>
+                <div className="col-span-3">
+                  {a.notes && <p className="text-xs text-slate-500 italic">{a.notes}</p>}
+                </div>
+                <div className="col-span-2">
+                  <span className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest ${APPT_BADGE[a.status]||APPT_BADGE.pending}`}>{a.status}</span>
+                </div>
+                <div className="col-span-1 flex justify-end gap-1">
+                  {a.status==='pending'&&isDoc&&<>
+                    <button className="p-2 rounded-xl hover:bg-emerald-50 text-emerald-600 transition-colors" onClick={()=>updateStatus(getId(a),'confirmed')} title="Confirm">
+                      <span className="material-symbols-outlined text-sm">check_circle</span>
+                    </button>
+                    <button className="p-2 rounded-xl hover:bg-red-50 text-red-500 transition-colors" onClick={()=>updateStatus(getId(a),'cancelled')} title="Cancel">
+                      <span className="material-symbols-outlined text-sm">cancel</span>
+                    </button>
+                  </>}
+                  {a.status==='confirmed'&&<button className="p-2 rounded-xl hover:bg-slate-100 text-slate-500 transition-colors opacity-0 group-hover:opacity-100" onClick={()=>updateStatus(getId(a),'completed')}>
+                    <span className="material-symbols-outlined text-sm">edit_calendar</span>
+                  </button>}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      }
+
+      <Modal title="Schedule Appointment" open={modal} onClose={()=>setModal(false)}
+        footer={<><button className={btnGhost} onClick={()=>setModal(false)}>Cancel</button><button className={btnPrimary} onClick={create} disabled={saving}>{saving?<><Spin/>Saving…</>:'Schedule'}</button></>}>
+        <div className="space-y-4">
+          <div><label className={labelCls}>{isDoc?'Patient':'Doctor'}</label>
+            <select className={inputCls} value={form.connectionId} onChange={e=>setForm(p=>({...p,connectionId:e.target.value}))}>
+              <option value="">— Select —</option>
+              {connections.map(c=>{const o=isDoc?connPatient(c):connDoctor(c);return<option key={getId(c)} value={getId(c)}>{o?.name} ({o?.userId})</option>;})}
+            </select>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div><label className={labelCls}>Date</label><input className={inputCls} type="date" value={form.date} min={new Date().toISOString().split('T')[0]} onChange={e=>setForm(p=>({...p,date:e.target.value}))}/></div>
+            <div><label className={labelCls}>Time</label><input className={inputCls} type="time" value={form.time} onChange={e=>setForm(p=>({...p,time:e.target.value}))}/></div>
+          </div>
+          <div><label className={labelCls}>Type</label>
+            <select className={inputCls} value={form.type} onChange={e=>setForm(p=>({...p,type:e.target.value}))}>
+              <option value="consultation">Consultation</option><option value="follow-up">Follow-up</option>
+              <option value="checkup">Checkup</option><option value="emergency">Emergency</option><option value="other">Other</option>
+            </select>
+          </div>
+          <div><label className={labelCls}>Notes</label><textarea className={inputCls} placeholder="Optional notes…" value={form.notes} onChange={e=>setForm(p=>({...p,notes:e.target.value}))}/></div>
+        </div>
+      </Modal>
+    </div>
+  );
+}
+
+/* ════════════════════════════════════════════════════
+   SETTINGS PAGE
+════════════════════════════════════════════════════ */
+function SettingsPage({ auth, setAuth }) {
+  const toast = useToast();
+  const [sec, setSec] = useState('profile');
+  const [saving, setSaving] = useState(false);
+  const isDoc = auth.user.role==='doctor';
+  const [pf, setPf] = useState({ name:auth.user.name||'', phone:auth.user.phone||'', address:auth.user.address||'', gender:auth.user.gender||'', specialization:auth.user.specialization||'', licenseNumber:auth.user.licenseNumber||'', hospital:auth.user.hospital||'', dateOfBirth:auth.user.dateOfBirth?auth.user.dateOfBirth.split('T')[0]:'', bloodGroup:auth.user.bloodGroup||'', allergies:auth.user.allergies||'' });
+  const [pw, setPw] = useState({ currentPassword:'', newPassword:'', confirmPassword:'' });
+  const [pwErr, setPwErr] = useState('');
+  const pal = avPalette(auth.user.name);
+
+  const saveProfile = async () => {
+    setSaving(true);
+    try { const d=await api.auth.updateProfile(pf); const na={...auth,user:{...auth.user,...d.user}}; localStorage.setItem('mb_auth',JSON.stringify(na)); setAuth(na); toast('Profile saved','success'); }
+    catch(e) { toast(errMsg(e),'error'); } finally { setSaving(false); }
+  };
+
+  const changePw = async () => {
+    setPwErr('');
+    if (pw.newPassword!==pw.confirmPassword) { setPwErr("Passwords don't match"); return; }
+    if (pw.newPassword.length<8) { setPwErr('Min 8 characters'); return; }
+    setSaving(true);
+    try { await api.auth.changePassword({currentPassword:pw.currentPassword,newPassword:pw.newPassword}); toast('Password changed','success'); setPw({currentPassword:'',newPassword:'',confirmPassword:''}); }
+    catch(e) { toast(errMsg(e),'error'); } finally { setSaving(false); }
+  };
+
+  const navSecs = [{k:'profile',i:'account_circle',l:'Profile'},{k:'security',i:'lock',l:'Security'},{k:'account',i:'info',l:'Account'}];
+
+  return (
+    <div className="p-8 max-w-5xl mx-auto w-full anim-up">
+      <div className="grid grid-cols-4 gap-6">
+        {/* Left nav */}
+        <div className="col-span-1 space-y-3">
+          <div className="bg-surface-container-lowest rounded-3xl p-6 text-center mb-4">
+            <div className={`w-16 h-16 rounded-2xl ${pal} flex items-center justify-center text-xl font-black mx-auto mb-3`}>{initials(auth.user.name)}</div>
+            <p className="font-extrabold text-sm">{auth.user.name}</p>
+            <p className="text-xs text-slate-400 mt-1">{auth.user.email}</p>
+            <span className={`mt-2 inline-block px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest ${isDoc?'bg-primary/10 text-primary':'bg-emerald-100 text-emerald-700'}`}>{isDoc?'Doctor':'Patient'}</span>
+          </div>
+          <div className="bg-surface-container-lowest rounded-2xl p-2 space-y-1">
+            {navSecs.map(n=>(
+              <button key={n.k} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-semibold text-sm transition-all ${sec===n.k?'bg-violet-100/60 text-violet-700':'text-slate-500 hover:text-slate-800 hover:bg-slate-100'}`}
+                onClick={()=>setSec(n.k)}>
+                <span className={`material-symbols-outlined ${sec===n.k?'ms-fill':''}`}>{n.i}</span>{n.l}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Right content */}
+        <div className="col-span-3">
+          {sec==='profile' && (
+            <div className="bg-surface-container-lowest rounded-3xl p-8">
+              <h3 className="text-xl font-extrabold mb-6">Profile Information</h3>
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div><label className={labelCls}>Full Name</label><input className={inputCls} value={pf.name} onChange={e=>setPf(p=>({...p,name:e.target.value}))}/></div>
+                  <div><label className={labelCls}>Gender</label><select className={inputCls} value={pf.gender} onChange={e=>setPf(p=>({...p,gender:e.target.value}))}><option value="">Select</option><option>Male</option><option>Female</option><option>Other</option></select></div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div><label className={labelCls}>Phone</label><input className={inputCls} placeholder="+91 …" value={pf.phone} onChange={e=>setPf(p=>({...p,phone:e.target.value}))}/></div>
+                  {!isDoc&&<div><label className={labelCls}>Date of Birth</label><input className={inputCls} type="date" value={pf.dateOfBirth} onChange={e=>setPf(p=>({...p,dateOfBirth:e.target.value}))}/></div>}
+                </div>
+                {isDoc ? (
+                  <>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div><label className={labelCls}>Specialization</label><input className={inputCls} placeholder="e.g. Cardiology" value={pf.specialization} onChange={e=>setPf(p=>({...p,specialization:e.target.value}))}/></div>
+                      <div><label className={labelCls}>License No.</label><input className={inputCls} value={pf.licenseNumber} onChange={e=>setPf(p=>({...p,licenseNumber:e.target.value}))}/></div>
+                    </div>
+                    <div><label className={labelCls}>Hospital / Clinic</label><input className={inputCls} value={pf.hospital} onChange={e=>setPf(p=>({...p,hospital:e.target.value}))}/></div>
+                  </>
+                ) : (
+                  <div className="grid grid-cols-2 gap-4">
+                    <div><label className={labelCls}>Blood Group</label><select className={inputCls} value={pf.bloodGroup} onChange={e=>setPf(p=>({...p,bloodGroup:e.target.value}))}><option value="">Unknown</option>{['A+','A-','B+','B-','AB+','AB-','O+','O-'].map(b=><option key={b}>{b}</option>)}</select></div>
+                    <div><label className={labelCls}>Known Allergies</label><input className={inputCls} placeholder="e.g. Penicillin" value={pf.allergies} onChange={e=>setPf(p=>({...p,allergies:e.target.value}))}/></div>
+                  </div>
+                )}
+                <div><label className={labelCls}>Address</label><textarea className={inputCls} value={pf.address} onChange={e=>setPf(p=>({...p,address:e.target.value}))}/></div>
+                <button className={btnPrimary} onClick={saveProfile} disabled={saving}>
+                  {saving?<><Spin/>Saving…</>:<><span className="material-symbols-outlined">save</span>Save Profile</>}
+                </button>
+              </div>
+            </div>
+          )}
+          {sec==='security' && (
+            <div className="bg-surface-container-lowest rounded-3xl p-8">
+              <h3 className="text-xl font-extrabold mb-6">Change Password</h3>
+              {pwErr&&<div className="flex items-center gap-2 p-3 bg-error-container/30 text-on-error-container rounded-2xl mb-4 text-sm font-medium"><span className="material-symbols-outlined ms-fill text-error">error</span>{pwErr}</div>}
+              <div className="space-y-4">
+                <div><label className={labelCls}>Current Password</label><input className={inputCls} type="password" placeholder="••••••••" value={pw.currentPassword} onChange={e=>setPw(p=>({...p,currentPassword:e.target.value}))}/></div>
+                <div><label className={labelCls}>New Password</label><input className={inputCls} type="password" placeholder="Min 8 characters" value={pw.newPassword} onChange={e=>setPw(p=>({...p,newPassword:e.target.value}))}/></div>
+                <div><label className={labelCls}>Confirm New Password</label><input className={inputCls} type="password" placeholder="••••••••" value={pw.confirmPassword} onChange={e=>setPw(p=>({...p,confirmPassword:e.target.value}))}/></div>
+                <button className={btnPrimary} onClick={changePw} disabled={saving}>
+                  {saving?<><Spin/>Changing…</>:<><span className="material-symbols-outlined">key</span>Change Password</>}
+                </button>
+              </div>
+            </div>
+          )}
+          {sec==='account' && (
+            <div className="bg-surface-container-lowest rounded-3xl p-8">
+              <h3 className="text-xl font-extrabold mb-6">Account Details</h3>
+              <div className="grid grid-cols-2 gap-4">
+                {[['Email',auth.user.email],['User ID',auth.user.userId],['Role',auth.user.role.charAt(0).toUpperCase()+auth.user.role.slice(1)],['Member since',fmtDate(auth.user.createdAt)]].map(([l,v])=>(
+                  <div key={l} className="p-4 bg-surface-container-low rounded-2xl">
+                    <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">{l}</p>
+                    <p className="font-extrabold text-sm" style={l==='User ID'?{fontFamily:'monospace'}:{}}>{v}</p>
+                  </div>
+                ))}
+              </div>
+              <div className="mt-4 p-4 bg-primary/5 border border-primary/15 rounded-2xl flex items-start gap-3">
+                <span className="material-symbols-outlined ms-fill text-primary mt-0.5">info</span>
+                <p className="text-sm text-primary/80 font-medium">Your unique ID <strong>{auth.user.userId}</strong> is what {auth.user.role==='doctor'?'patients':'doctors'} use to connect with you. Share it securely.</p>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ════════════════════════════════════════════════════
+   DOCTOR APP
+════════════════════════════════════════════════════ */
+function DoctorApp({ auth, setAuth }) {
+  const [page, setPage] = useState('home');
+  const [conns, setConns] = useState([]);
+  const [sel, setSel] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [unread, setUnread] = useState(0);
+
+  useEffect(()=>{ api.connections.list().then(d=>setConns(d.connections||[])).finally(()=>setLoading(false)); },[]);
+  useEffect(()=>{ const t=setInterval(()=>api.messages.unread().then(d=>setUnread(d.count||0)).catch(()=>{}),8000); return ()=>clearInterval(t); },[]);
+
+  const logout = () => { localStorage.removeItem('mb_auth'); setAuth(null); };
+  const goPage = p => { setPage(p); if(p!=='detail') setSel(null); };
+
+  const titles = { home:'Overview', patients:'Patients', records:'Records', appointments:'Appointments', messages:'Messages', settings:'Settings', detail: sel?connPatient(sel)?.name:'Patient' };
+  const subs = { home:`${conns.length} active patients`, patients:'Manage patient connections', records:'Clinical document vault', appointments:'Schedule oversight', messages:'Secure patient communications', settings:'Account & preferences' };
+
+  if (loading) return <div className="flex items-center justify-center h-screen gap-4 text-slate-400"><Spin size="lg"/><span className="font-semibold">Loading your clinical workspace…</span></div>;
+
+  return (
+    <div className="flex h-screen overflow-hidden">
+      <Sidebar user={auth.user} page={page} setPage={goPage} onLogout={logout} unread={unread} connections={conns} setConnections={setConns} setSelectedConn={setSel}/>
+      <main className="flex-1 ml-72 h-screen overflow-y-auto no-scrollbar flex flex-col">
+        <Topbar title={titles[page]||'Dashboard'} subtitle={subs[page]}/>
+        {page==='home'         && <DocHome auth={auth} connections={conns} setPage={goPage} setSelectedConn={setSel}/>}
+        {page==='patients'     && <div className="p-8 max-w-7xl mx-auto w-full"><Empty icon="group" title="Select a patient" msg="Pick someone from the sidebar or connect using their Patient ID"/></div>}
+        {page==='records'      && <div className="p-8 max-w-7xl mx-auto w-full"><Empty icon="folder_open" title="Select a patient first" msg="Go to Patients, open a record, then manage files" action={<button className={btnPrimary} onClick={()=>goPage('patients')}><span className="material-symbols-outlined">group</span>Go to Patients</button>}/></div>}
+        {page==='appointments' && <AppointmentsPage auth={auth} connections={conns}/>}
+        {page==='messages'     && <MessagesPage auth={auth} connections={conns}/>}
+        {page==='settings'     && <SettingsPage auth={auth} setAuth={setAuth}/>}
+        {page==='detail'&&sel  && <DetailPage auth={auth} connection={sel} onBack={()=>goPage('patients')}/>}
+        <footer className="mt-auto py-6 px-8 border-t border-outline-variant/30 flex justify-between items-center text-xs text-slate-400 font-medium">
+          <p>© 2024 MediBhavan · Clinical Sanctuary. All patient data is encrypted (AES-256).</p>
+          <div className="flex gap-6">
+            <span className="hover:text-primary cursor-pointer transition-colors">Privacy Protocol</span>
+            <span className="hover:text-primary cursor-pointer transition-colors">Clinical Ethics</span>
+            <span className="hover:text-primary cursor-pointer transition-colors">Support</span>
+          </div>
+        </footer>
+      </main>
+    </div>
+  );
+}
+
+/* ════════════════════════════════════════════════════
+   PATIENT APP
+════════════════════════════════════════════════════ */
+function PatientApp({ auth, setAuth }) {
+  const [page, setPage] = useState('home');
+  const [conns, setConns] = useState([]);
+  const [sel, setSel] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [unread, setUnread] = useState(0);
+
+  useEffect(()=>{ api.connections.list().then(d=>setConns(d.connections||[])).finally(()=>setLoading(false)); },[]);
+  useEffect(()=>{ const t=setInterval(()=>api.messages.unread().then(d=>setUnread(d.count||0)).catch(()=>{}),8000); return ()=>clearInterval(t); },[]);
+
+  const logout = () => { localStorage.removeItem('mb_auth'); setAuth(null); };
+  const goPage = p => { setPage(p); if(p!=='detail') setSel(null); };
+
+  const titles = { home:'Overview', records:'My Records', appointments:'Appointments', doctors:'My Doctors', messages:'Messages', settings:'Settings', detail: sel?connDoctor(sel)?.name:'Doctor' };
+  const subs = { home:'Your health at a glance', records:'Your medical files', appointments:'Your schedule', doctors:'Your care team', messages:'Secure communications', settings:'Account & preferences' };
+
+  if (loading) return <div className="flex items-center justify-center h-screen gap-4 text-slate-400"><Spin size="lg"/><span className="font-semibold">Loading your health workspace…</span></div>;
+
+  return (
+    <div className="flex h-screen overflow-hidden">
+      <Sidebar user={auth.user} page={page} setPage={goPage} onLogout={logout} unread={unread} connections={conns} setConnections={setConns} setSelectedConn={setSel}/>
+      <main className="flex-1 ml-72 h-screen overflow-y-auto no-scrollbar flex flex-col">
+        <Topbar title={titles[page]||'Dashboard'} subtitle={subs[page]}/>
+        {page==='home'         && <PatHome auth={auth} connections={conns} setPage={goPage} setSelectedConn={setSel}/>}
+        {page==='records'      && <RecordsPage auth={auth} connections={conns} patientId={getId(auth.user)} isDoc={false}/>}
+        {page==='appointments' && <AppointmentsPage auth={auth} connections={conns}/>}
+        {page==='doctors'      && <div className="p-8 max-w-7xl mx-auto w-full"><Empty icon="medical_services" title="Select a doctor" msg="Enter your doctor's ID in the sidebar to connect"/></div>}
+        {page==='messages'     && <MessagesPage auth={auth} connections={conns}/>}
+        {page==='settings'     && <SettingsPage auth={auth} setAuth={setAuth}/>}
+        {page==='detail'&&sel  && <DetailPage auth={auth} connection={sel} onBack={()=>goPage('doctors')}/>}
+        <footer className="mt-auto py-6 px-8 border-t border-outline-variant/30 flex justify-between items-center text-xs text-slate-400 font-medium">
+          <p>© 2024 MediBhavan · Clinical Sanctuary. All health data is encrypted (AES-256).</p>
+          <div className="flex gap-6">
+            <span className="hover:text-primary cursor-pointer transition-colors">Privacy Policy</span>
+            <span className="hover:text-primary cursor-pointer transition-colors">Help Center</span>
+          </div>
+        </footer>
+      </main>
+    </div>
+  );
+}
+
+/* ════════════════════════════════════════════════════
+   ROOT APP
+════════════════════════════════════════════════════ */
+function App() {
+  const [auth, setAuth] = useState(() => {
+    try { const s=localStorage.getItem('mb_auth'); return s?JSON.parse(s):null; } catch { return null; }
+  });
+  const handleAuth = d => { localStorage.setItem('mb_auth',JSON.stringify(d)); setAuth(d); };
+  if (!auth) return <AuthPage onAuth={handleAuth}/>;
+  return auth.user.role==='doctor' ? <DoctorApp auth={auth} setAuth={handleAuth}/> : <PatientApp auth={auth} setAuth={handleAuth}/>;
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(
+  <ToastProvider><App/></ToastProvider>
+);
+</script>
+</body>
+</html>
